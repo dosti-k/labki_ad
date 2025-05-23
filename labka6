@@ -1,0 +1,116 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+
+np.random.seed(42)
+true_k = 2.5
+true_b = 1.0
+x = np.linspace(0, 10, 100)
+y = true_k * x + true_b + np.random.normal(0, 1.5, size=len(x))
+
+def mse(y_true, y_pred):
+    return np.mean((y_true - y_pred)**2)
+
+def mae(y_true, y_pred):
+    return np.mean(np.abs(y_true - y_pred))
+
+
+def least_squares(x, y):
+    n = len(x)
+    sum_x = np.sum(x)
+    sum_y = np.sum(y)
+    sum_xy = np.sum(x * y)
+    sum_x2 = np.sum(x**2)
+    
+    k = (n * sum_xy - sum_x * sum_y) / (n * sum_x2 - sum_x**2)
+    b = (sum_y - k * sum_x) / n
+    
+    return k, b
+
+our_k, our_b = least_squares(x, y)
+numpy_k, numpy_b = np.polyfit(x, y, 1)
+
+
+def gradient_descent(x, y, learning_rate=0.01, n_iter=1000):
+    k = 0.0
+    b = 0.0
+    n = len(x)
+    mse_errors = []
+    mae_errors = []
+    
+    for i in range(n_iter):
+        y_pred = k * x + b
+        mse_errors.append(mse(y, y_pred))
+        mae_errors.append(mae(y, y_pred))
+        
+        dk = (2/n) * np.sum(x * (y_pred - y))
+        db = (2/n) * np.sum(y_pred - y)
+        
+        k -= learning_rate * dk
+        b -= learning_rate * db
+    
+    return k, b, mse_errors, mae_errors
+
+gd_k, gd_b, mse_errors, mae_errors = gradient_descent(x, y)
+
+
+plt.figure(figsize=(15, 10))
+
+
+plt.subplot(2, 2, 1)
+plt.scatter(x, y, alpha=0.6, label='Дані з шумом')
+plt.plot(x, true_k * x + true_b, 'g-', linewidth=2, label=f'Справжня пряма: y = {true_k:.2f}x + {true_b:.2f}')
+plt.plot(x, our_k * x + our_b, 'r--', linewidth=2, label=f'МНК: y = {our_k:.2f}x + {our_b:.2f}')
+plt.plot(x, numpy_k * x + numpy_b, 'b:', linewidth=2, label=f'numpy.polyfit: y = {numpy_k:.2f}x + {numpy_b:.2f}')
+plt.plot(x, gd_k * x + gd_b, 'm-.', linewidth=2, label=f'Градієнтний спуск: y = {gd_k:.2f}x + {gd_b:.2f}')
+plt.xlabel('x')
+plt.ylabel('y')
+plt.title('Порівняння методів регресії')
+plt.legend()
+plt.grid(True)
+
+
+plt.subplot(2, 2, 2)
+plt.plot(range(len(mse_errors)), mse_errors, 'r-')
+plt.xlim(0, 10)
+plt.ylim(0, 10)  
+plt.xlabel('Кількість ітерацій')
+plt.ylabel('MSE')
+plt.title('Збіжність градієнтного спуску (MSE)')
+plt.grid(True)
+
+
+plt.subplot(2, 2, 3)
+plt.plot(range(len(mae_errors)), mae_errors, 'b-')
+plt.xlim(0, 10)
+plt.ylim(0, 10)  
+plt.xlabel('Кількість ітерацій')
+plt.ylabel('MAE')
+plt.title('Збіжність градієнтного спуску (MAE)')
+plt.grid(True)
+
+
+methods = {
+    "Справжня пряма": (true_k, true_b),
+    "МНК": (our_k, our_b),
+    "polyfit": (numpy_k, numpy_b),
+    "Град. спуск": (gd_k, gd_b)
+}
+
+mse_values = []
+mae_values = []
+names = []
+
+for name, (k, b) in methods.items():
+    y_pred = k * x + b
+    mse_values.append(mse(y, y_pred))
+    mae_values.append(mae(y, y_pred))
+    names.append(name)
+
+
+
+
+print("Остаточні результати:")
+print(f"{'Метод':<15} {'MSE':<10} {'MAE':<10}")
+for name, mse_val, mae_val in zip(names, mse_values, mae_values):
+    print(f"{name:<15} {mse_val:<10.4f} {mae_val:<10.4f}")
